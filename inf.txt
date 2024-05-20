@@ -1,0 +1,252 @@
+ wsl --install:
+    installare wls per eseguire un amibiente linux necessario per installare la libreria django-auth-ldap
+
+sudo apt update:
+    Questo comando aggiorna l'indice dei pacchetti del tuo sistema operativo Linux.
+    È un passaggio preliminare necessario per assicurarti che tu stia installando le versioni più recenti dei pacchetti disponibili.
+
+installazione librerie necessarie libldap2-dev e libsasl2-dev
+sudo apt install python3-pip python3-dev libldap2-dev libsasl2-dev libssl-dev:
+    Questo comando installa vari pacchetti utili per lo sviluppo e l'esecuzione di applicazioni Python,
+     in particolare quelle che interagiscono con server LDAP.
+
+python3-pip:
+    Il gestore dei pacchetti per Python, che ti permette di installare e gestire ulteriori librerie Python.
+
+python3-dev:
+    Questo pacchetto contiene gli header e le librerie di sviluppo per Python. È necessario per compilare alcune
+     estensioni Python in C quando si installano pacchetti tramite pip.
+
+libldap2-dev: 
+    Fornisce gli header e le librerie di sviluppo per OpenLDAP. È essenziale per compilare pacchetti che richiedono 
+    l'accesso a directory LDAP, come python-ldap.
+
+libsasl2-dev: 
+    Questo pacchetto include le librerie di sviluppo per l'autenticazione SASL (Simple Authentication and Security Layer), 
+    che può essere utilizzata insieme a LDAP.
+    
+libssl-dev: 
+    Include le librerie di sviluppo per SSL/TLS, necessarie per compilare molti pacchetti che utilizzano
+    la crittografia o per comunicare in modo sicuro su reti.
+
+pip install django-auth-ldap:
+
+
+
+Configurazione in Django
+    Aggiungi il backend di autenticazione LDAP alla tua configurazione di Django modificando il file settings.py:
+
+    AUTHENTICATION_BACKENDS = [
+        'django_auth_ldap.backend.LDAPBackend',
+        'django.contrib.auth.backends.ModelBackend',  # Opzionale, per supporto utente locale
+    ]
+
+
+configurare il tuo server LDAP nel file settings.py.
+
+    parametri principali da configurare:
+    AUTH_LDAP_SERVER_URI: L'URI del tuo server LDAP.
+    AUTH_LDAP_BIND_DN e AUTH_LDAP_BIND_PASSWORD: Per eseguire il bind al server LDAP.
+        Questo valore è specifico per la configurazione del server LDAP e serve a 
+        identificare l'utente che effettua la connessione al server LDAP. 
+    AUTH_LDAP_USER_SEARCH: Un oggetto LDAPSearch per trovare gli utenti nel server LDAP.
+         Questa specifica riga di codice definisce come Django dovrebbe cercare gli utenti nel tuo server LDAP. 
+         
+
+    Esempio di configurazione:
+    import ldap
+    from django_auth_ldap.config import LDAPSearch
+
+    AUTH_LDAP_SERVER_URI = "ldap://ldap.example.com"
+    AUTH_LDAP_BIND_DN = "cn=read-only-admin,dc=example,dc=com"
+        cofigurazione common name e domanin component che rapprensenta il dominio nel quale l'utente esiste
+    AUTH_LDAP_BIND_PASSWORD = "password"
+    AUTH_LDAP_USER_SEARCH = LDAPSearch(
+        "ou=users,dc=example,dc=com",
+        ldap.SCOPE_SUBTREE,
+        "(uid=%(user)s)"
+    )
+        Componenti di AUTH_LDAP_USER_SEARCH
+            Base DN (ou=users,dc=example,dc=com):
+                Questo è il Distinguished Name (DN) di base che indica la posizione nel tree LDAP da
+                cui iniziare la ricerca degli utenti. In questo caso, la ricerca comincia nella Organizational Unit (OU)
+                chiamata "users" all'interno del dominio "example.com".
+            Scope della Ricerca (ldap.SCOPE_SUBTREE):
+                Questo parametro determina il livello di profondità della ricerca all'interno del tree LDAP.
+                ldap.SCOPE_SUBTREE significa che la ricerca sarà ricorsiva e includerà la OU specificata
+                e tutte le sue sottodirectory. 
+                Altre opzioni includono ldap.SCOPE_BASE, che cerca solo nel DN base,
+                e ldap.SCOPE_ONELEVEL, che cerca solo un livello sotto il DN base.
+            Filtro di Ricerca ("(uid=%(user)s)"):
+                Questo è il filtro LDAP utilizzato per identificare l'utente specifico.
+                Il filtro utilizza l'attributo uid (User ID), che è un identificatore comune per gli utenti nei sistemi LDAP.
+                %(user)s è un placeholder che django-auth-ldap sostituirà con il nome utente fornito dall'utente 
+                che sta tentando di autenticarsi. Questo filtro garantisce che solo l'oggetto 
+                utente corrispondente a quel nome utente specifico verrà restituito.
+
+
+
+
+
+Mappatura degli Attributi
+    Puoi mappare gli attributi LDAP agli attributi del modello utente in Django:
+
+    AUTH_LDAP_USER_ATTR_MAP = {
+        "first_name": "givenName",
+        "last_name": "sn",
+        "email": "mail"
+    }
+
+Gestione della Connessione
+    Per gestire le connessioni sicure, potresti voler configurare il tuo sistema per utilizzare TLS o SSL,
+    o per validare i certificati del server LDAP:
+
+    AUTH_LDAP_START_TLS = True
+
+Gruppi e Permessi
+Puoi configurare Django per mappare i gruppi LDAP ai gruppi di utenti Django,
+permettendo di gestire permessi basati sui gruppi LDAP:
+
+AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
+    "ou=django,ou=groups,dc=example,dc=com",
+    ldap.SCOPE_SUBTREE,
+    "(objectClass=groupOfNames)"
+)
+AUTH_LDAP_GROUP_TYPE = GroupOfNamesType(name_attr="cn")
+
+
+
+
+asgiref==3.7.2
+cffi==1.16.0
+colorama==0.4.6
+cryptography==42.0.5
+Django==5.0.3
+django-appconf==1.0.6
+django-cryptography==1.1
+django-environ==0.11.2
+django-otp==1.3.0
+mysqlclient==2.2.4
+pillow==10.2.0
+pycparser==2.21
+pyotp==2.9.0
+pypng==0.20220715.0
+python-decouple==3.8
+qrcode==7.4.2
+sqlparse==0.4.4
+typing_extensions==4.10.0
+tzdata==2024.1
+django-python3-ldap==0.15.6
+
+
+
+
+
+from django.shortcuts import redirect
+from django.urls import resolve
+from two_factor_auth.models import UserProfile
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+
+class TwoFactorAuthMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        if request.user.is_authenticated:
+            try:
+                profile = UserProfile.objects.get(user=request.user)
+                current_url_name = resolve(request.path).url_name
+                # Verifica se il token di sessione corrisponde
+                session_token = request.session.get('session_token')
+                if profile.session_token != session_token:
+                    # Se il token non corrisponde, effettua il logout
+                    return redirect('two_factor_auth:logout')
+
+                if request.session.get('verified_2fa', False) and current_url_name in ['generate_qr', 'verify_otp','verify_backup']:
+                    return redirect('dashboard:homepage')
+
+                if current_url_name != 'homepage' and request.session.get('verified_2fa', False):
+                # Se l'utente ha verificato l'OTP, non dovrebbe essere reindirizzato altrove.
+                    return response
+                # Assicurati che l'utente completi la configurazione 2FA prima di accedere alla homepage
+                if current_url_name == 'homepage':
+                    if not request.session.get('verified_2fa', False):
+                        # Reindirizza a generate_qr o verify_otp in base alla configurazione del segreto 2FA
+                        if not profile.two_factor_secret:
+                            return redirect('two_factor_auth:generate_qr')
+                        else:
+                            return redirect('two_factor_auth:verify_otp')
+
+                # Gestisci il flusso tra la generazione del QR e la verifica OTP
+                
+                if current_url_name == 'generate_qr':
+                    if profile.two_factor_secret and not request.session.get('two_factor_token'):
+                    # Accesso a generate_qr solo se esiste un token nella sessione
+                        # Senza token, reindirizza a verify_otp
+                        return redirect('two_factor_auth:verify_otp')
+                    
+            except UserProfile.DoesNotExist:
+                return redirect('auth:logout')
+
+        return response
+
+
+
+
+
+
+
+
+
+# Verifica il token di sessione
+                current_session_token = profile.session_token
+                if 'session_token' in request.session and current_session_token == request.session['session_token']:
+                    logout(request)  # Forza il logout dalla sessione corrente
+                else:
+                    login(request, user)
+                    request.session.cycle_key()
+                    profile.reset_failed_login_attempts()  # Reset dei tentativi falliti
+                    if not profile.two_factor_secret:
+                        return redirect('two_factor_auth:generate_qr')
+                    else:
+                        request.session['verified_2fa'] = False  # Resetta il flag di verifica
+                        # Genera un nuovo token di sessione
+                        session_token = secrets.token_urlsafe()
+                        # Salva il token nel profilo utente
+                        profile.session_token = session_token
+                        profile.save()
+                        # Imposta il token nella sessione dell'utente
+                        request.session['session_token'] = session_token
+                        return redirect('two_factor_auth:verify_otp')
+
+
+
+
+
+
+
+
+@login_required
+def verify_otp(request):
+    form = OTPForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        profile = UserProfile.objects.get(user=request.user)
+        totp = pyotp.TOTP(profile.two_factor_secret)
+        if totp.verify(form.cleaned_data['otp_code']):
+            # Se è la prima configurazione del 2FA, invia i codici di backup
+            if 'two_factor_token' in request.session:
+                request.session.pop('two_factor_token', None)
+            # Se il codice OTP è corretto, imposta il flag di verifica nella sessione.
+            
+            request.session['verified_2fa'] = True
+            return redirect('dashboard:homepage')
+        else:
+            # Se il codice OTP non è corretto, mostra un errore.
+            form.add_error('otp_code', 'Codice OTP non valido.')
+            
+    # Se il metodo non è POST o il form non è valido, mostra semplicemente la pagina.
+    return render(request, 'verify_otp.html', {'form': form})
+

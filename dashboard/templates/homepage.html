@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Homepage</title>
+</head>
+<body>
+    <div class="navbar">
+        <ul>
+            
+            <!-- Altri link della navbar se necessario -->
+            <li><a href="{% url 'two_factor_auth:logout' %}" onclick="return confirm('Sei sicuro di voler uscire?');">Logout</a></li>
+        </ul>
+    </div>
+    <h1>Benvenuto nella homepage!</h1>
+    <!-- Aggiungi altro contenuto qui -->
+</body>
+</html>

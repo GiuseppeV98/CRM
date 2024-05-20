@@ -1,0 +1,31 @@
+<!-- templates/verify_otp.html -->
+<!DOCTYPE html>
+<html lang="it">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>My Website</title>
+        {% load static %}
+        <link rel="stylesheet" type="text/css" href="{% static 'admin/css/mycss/styleLogin.css' %}">
+    </head>
+    <body>
+        <div id="container">
+    <h1>Verifica OTP</h1>
+    <span>Inserisci il codice numerico a 6 cifre,</span>
+    <span>all'interno dell'app di autenticazione.</span>
+    <div id="cellform">
+    <form method="post" action="{% url 'two_factor_auth:verify_otp' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        {% if error %}
+            <p class="error">{{ error }}</p>    
+        {% endif %}
+        <button type="submit">Verifica</button>
+    </form>
+    <div id="backupCodeOption">
+        <p>Problemi con il tuo codice OTP?</p>
+        <a href="{% url 'two_factor_auth:send_otp_and_redirect' %}" class="backupCodeLink">Usa un codice di backup</a>
+    </div>
+</div>
+</div>
+</body>

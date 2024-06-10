@@ -1,1 +1,4 @@
 **/__pycache__/
+env_site/
+.env
+.env.prova  

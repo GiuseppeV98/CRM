@@ -250,3 +250,96 @@ def verify_otp(request):
     # Se il metodo non è POST o il form non è valido, mostra semplicemente la pagina.
     return render(request, 'verify_otp.html', {'form': form})
 
+
+
+
+
+    mssql-django:
+    python -m pip install pyodbc
+    pip install mssql-django
+    
+       DATABASES = {
+        'default': {
+            'ENGINE': 'mssql',
+            'NAME': 'mydb',
+            'USER': 'user@myserver',
+            'PASSWORD': 'password',
+            'HOST': 'myserver.database.windows.net',
+            'PORT': '',
+
+            'OPTIONS': {
+                'driver': 'ODBC Driver 17 for SQL Server',
+            },
+        },
+    }
+
+    # set this to False if you want to turn off pyodbc's connection pooling
+    DATABASE_CONNECTION_POOLING = False
+
+
+    DATABASE_URL=mysql://root:Peppe1998!@localhost:3306/utentiaut
+
+
+from ldap3 import Server, Connection, ALL
+
+ldap_server = '192.168.1.2'  
+ldap_port = 389
+user_email = 'TestLdap@corporate.it' 
+user_password = 'T3st@Ld4p'  
+
+try:
+    server = Server(ldap_server, port=ldap_port, get_info=ALL)
+    conn = Connection(server,
+                      user=user_email,  
+                      password= user_password,
+                      auto_bind=True)
+    
+    if conn.bind():
+        print("Autenticazione al server LDAP riuscita.")
+    else:
+        print("Autenticazione al server LDAP fallita.")
+except Exception as e:
+    print(f"Errore nell'autenticazione al server LDAP: {e}")
+
+    import pyodbc
+
+
+    49730
+
+
+
+        if request.user.is_authenticated:
+        
+            profile = UserProfile.objects.get(user=request.user)
+            current_url_name = resolve(request.path).url_name
+            # Verifica se il token di sessione corrisponde
+            session_token = request.session.get('session_token')
+            if request.session.get('verified_2fa', False):
+                if profile.session_token != session_token:
+            
+            # Solo se l'utente ha verificato 2FA e il token non corrisponde, effettua il logout
+                    return redirect('two_factor_auth:logout')
+
+            if request.session.get('verified_2fa', False) and current_url_name in ['generate_qr', 'verify_otp','verify_backup']:
+                return redirect('dashboard:homepage')
+
+            if current_url_name != 'homepage' and request.session.get('verified_2fa', False):
+            # Se l'utente ha verificato l'OTP, non dovrebbe essere reindirizzato altrove.
+                return response
+            # Assicurati che l'utente completi la configurazione 2FA prima di accedere alla homepage
+            if current_url_name == 'homepage':
+                if not request.session.get('verified_2fa', False):
+                    # Reindirizza a generate_qr o verify_otp in base alla configurazione del segreto 2FA
+                    if not profile.two_factor_secret:
+                        return redirect('two_factor_auth:generate_qr')
+                    else:
+                        return redirect('two_factor_auth:verify_otp')
+
+            # Gestisci il flusso tra la generazione del QR e la verifica OTP
+            
+            if current_url_name == 'generate_qr':
+                if profile.two_factor_secret and not request.session.get('two_factor_token'):
+                # Accesso a generate_qr solo se esiste un token nella sessione
+                    # Senza token, reindirizza a verify_otp
+                    return redirect('two_factor_auth:verify_otp')
+

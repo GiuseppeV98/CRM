@@ -23,28 +23,28 @@ from django.contrib import messages
 class OTPForm(forms.Form):
     otp_code = forms.CharField(label='Codice OTP', max_length=6)
 
-# Vista per il login semplice
 
 def user_login(request):
     form = AuthenticationForm(request, data=request.POST or None)
-    
     if request.user.is_authenticated:
         return redirect('two_factor_auth:verify_otp')
 
     if request.method == 'POST':
-        username = request.POST.get('username')
+        email = request.POST.get('username')
         password = request.POST.get('password')
-        user_attempt = User.objects.filter(username=username).first()
-
+        user_attempt = User.objects.filter(username=email).first()
         if user_attempt:
-            profile, _ = UserProfile.objects.get_or_create(user=user_attempt)
+            try:
+                profile, _ = UserProfile.objects.get_or_create(user=user_attempt)
+            except Exception as e:
+                return render(request, 'login.html', {'form': form})
+
             if not profile.can_attempt_login():
                 form.add_error(None, "Troppi tentativi di accesso falliti. Riprova più tardi.")
                 return render(request, 'login.html', {'form': form})
             
-            user = authenticate(username=username, password=password)
+            user = authenticate(username=email, password=password)
             if user:
-                            
                 login(request, user)  # Assicurati di fare il login prima di manipolare la sessione
                 request.session.cycle_key()
 
@@ -54,8 +54,6 @@ def user_login(request):
                     return redirect('two_factor_auth:generate_qr')
                 else:
                     request.session['verified_2fa'] = False  # Resetta il flag di verifica
-                    # Genera un nuovo token di sessione solo se non esiste già
-                    # Genera e aggiorna il session_token solo al primo accesso
                     if not request.session.get('session_token'):
                         session_token = secrets.token_urlsafe()
                         profile.session_token = session_token
@@ -63,14 +61,11 @@ def user_login(request):
                         request.session['session_token'] = session_token
 
                     return redirect('two_factor_auth:verify_otp')
-
             else:
                 profile.register_failed_login()  # Registra il tentativo fallito
-                #form.add_error(None, "Username o password non validi.")
-        #else:
-            #form.add_error(None, "Username o password non validi.")
 
     return render(request, 'login.html', {'form': form})
+
 @login_required
 def generate_qr_code(request):
     profile, created = UserProfile.objects.get_or_create(user=request.user)
@@ -122,7 +117,7 @@ def send_otp(utente):
     utente.profile.save()
     send_mail(
         'Il tuo codice OTP',
-        f'Il tuo codice OTP è: {otp}. Valido per 10 minuti.',
+        f'Il tuo codice OTP è: {otp}. Valido per 1 minuti.',
         'noreply@esempio.com',
         [utente.email],
         fail_silently=False,

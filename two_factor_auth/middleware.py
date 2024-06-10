@@ -12,7 +12,6 @@ class TwoFactorAuthMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-
         if request.user.is_authenticated:
         
             profile = UserProfile.objects.get(user=request.user)
@@ -47,7 +46,7 @@ class TwoFactorAuthMiddleware:
                 # Accesso a generate_qr solo se esiste un token nella sessione
                     # Senza token, reindirizza a verify_otp
                     return redirect('two_factor_auth:verify_otp')
-             
+
         return response
 
 

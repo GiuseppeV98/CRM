@@ -18,3 +18,4 @@ try:
         print("Autenticazione al server LDAP fallita.")
 except Exception as e:
     print(f"Errore nell'autenticazione al server LDAP: {e}")
+

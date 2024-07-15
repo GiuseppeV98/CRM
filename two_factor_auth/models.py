@@ -2,25 +2,33 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 import datetime
-
-#import secrets
-#from django.contrib.auth.hashers import make_password
+from django.core import signing
 
 
-# Funzione ausiliaria per generare i codici di backup
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     two_factor_secret = models.CharField(max_length=100, blank=True)
     failed_login_attempts = models.IntegerField(default=0)
     last_failed_login_attempt = models.DateTimeField(null=True, blank=True)
-    session_token = models.CharField(max_length=100, blank=True)
-    email_otp = models.CharField(max_length=64, blank=True, null=True)  # Hash dell'OTP
+    session_token = models.CharField(max_length=255, blank=True)
+    last_check_token = models.DateTimeField(null=True, blank=True)
+    email_otp = models.CharField(max_length=64, blank=True, null=True)  # Hash dell'OTP  , 
     otp_timestamp = models.DateTimeField(null=True, blank=True)
-    # Quando crei o aggiorni il two_factor_secret
+    
+    def set_session_token(self, token):
+        self.session_token = signing.dumps(token)
+
+    def get_session_token(self):
+        return signing.loads(self.session_token)
+    
+    def set_two_factor(self, token):
+        self.two_factor_secret = signing.dumps(token)
+
+    def get_two_factor(self):
+        return signing.loads(self.two_factor_secret)
+    
     def can_attempt_login(self):
-        # Sostituisci 5 con il numero massimo di tentativi che desideri permettere
         max_attempts = 5
-        # Sostituisci 10 con il numero di minuti dopo i quali resettare il conteggio dei tentativi
         reset_time = 10
 
         if self.failed_login_attempts < max_attempts:
@@ -43,8 +51,9 @@ class UserProfile(models.Model):
         except Exception as e:
             print(f"Error occurred: {e}")
 
+
+        #Azzera i tentativi di login falliti
     def reset_failed_login_attempts(self):
-        """Azzera i tentativi di login falliti."""
         self.failed_login_attempts = 0
         self.last_failed_login_attempt = None
         self.save()

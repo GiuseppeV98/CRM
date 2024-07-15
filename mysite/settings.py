@@ -15,7 +15,7 @@ import os
 from decouple import config
 
 
-SECRET_KEY = config('DJANGO_SECRET_KEY')
+#   SECRET_KEY = config('DJANGO_SECRET_KEY')
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -175,20 +175,7 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-DATABASES = {
-    'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'prova_sqls',
-        'USER': 'sa',
-        'PASSWORD': 'Peppe1998!',
-        'HOST': 'LAPTOP-IEQV8TAD\SQLEXPRESS',  # Assicurati che questo sia corretto
-        'PORT': '1433',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'TrustServerCertificate': 'yes',
-        },
-    },
-}
+
 
 
 #import environ
@@ -206,9 +193,13 @@ import environ
 env = environ.Env()
 
 # Leggi il file .env
-env_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env.prova')
+env_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
 if os.path.exists(env_file):
     environ.Env.read_env(env_file)
+
+
+# Imposta la SECRET_KEY leggendo dalla variabile d'ambiente
+SECRET_KEY = env('SECRET_KEY')
 
 # Configura il database usando l'URL dal file .env
 DATABASES = {

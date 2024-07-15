@@ -343,3 +343,126 @@ except Exception as e:
                     # Senza token, reindirizza a verify_otp
                     return redirect('two_factor_auth:verify_otp')
 
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'mssql',
+        'NAME': 'prova_sqls',
+        'USER': 'sa',
+        'PASSWORD': 'Peppe1998!',
+        'HOST': 'LAPTOP-IEQV8TAD\SQLEXPRESS',  # Assicurati che questo sia corretto
+        'PORT': '1433',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'TrustServerCertificate': 'yes',
+        },
+    },
+}
+
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from users.models import UserProfile
+
+@csrf_exempt
+def verify_token(request):
+    if request.method == 'POST':
+        token_value = request.POST.get('token')
+    elif request.method == 'GET':
+        token_value = request.GET.get('token')
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+    if UserProfile.objects.filter(session_token=token_value).exists():
+        return JsonResponse({'status': 'valid'})
+    else:
+        return JsonResponse({'status': 'invalid'})
+
+
+
+@csrf_exempt
+@login_required
+def verify_token(request):
+    token_value = None
+
+    if request.method == 'POST':
+        token_value = request.POST.get('token') 
+    elif request.method == 'GET':
+        token_value = request.GET.get('token') 
+    else:
+        return HttpResponse('Invalid request method', status=400)
+
+    if token_value and UserProfile.objects.filter(session_token=token_value).exists():
+        profile = UserProfile.objects.get(user=request.user)
+        #tempo_corrente = timezone.now()
+        tempo_valido = profile.last_check_token  + timedelta(minutes=30)
+        profile.last_check_token 
+        if tempo_corrente <= tempo_valido:
+            profile.last_check_token = timezone.now()  # Aggiorna last_check_token con l'ora corrente
+            profile.save()
+            return HttpResponse(True)
+        else:
+            return HttpResponse(False, status=403) 
+    else:
+        return HttpResponse(False)
+
+
+@csrf_exempt
+def verify_token(request):
+    token_value = None
+
+    if request.method == 'POST':
+        token_value = request.POST.get('token') or request.headers.get('Authorization')
+    elif request.method == 'GET':
+        token_value = request.GET.get('token') or request.headers.get('Authorization')
+    else:
+        return HttpResponse('Invalid request method', status=400)
+
+    if token_value and UserProfile.objects.filter(session_token=token_value).exists():
+        return HttpResponse('valid')
+    else:
+        return HttpResponse('invalid')
+
+
+
+
+          
+            profile = UserProfile.objects.get(user=request.user)
+            current_url_name = resolve(request.path).url_name
+            # Verifica se il token di sessione corrisponde
+            session_token = request.session.get('session_token')
+            if request.session.get('verified_2fa', False):
+                if profile.session_token != session_token:
+            
+            # Solo se l'utente ha verificato 2FA e il token non corrisponde, effettua il logout
+                    return redirect('two_factor_auth:logout')
+
+
+
+                    @csrf_exempt
+def verify_token(request):
+    token_value = None
+
+    if request.method == 'POST':
+        token_value = request.POST.get('token')
+    elif request.method == 'GET':
+        token_value = request.GET.get('token')
+    else:
+        return HttpResponse('Invalid request method', status=400)
+
+    if token_value and UserProfile.objects.filter(session_token=token_value).exists():
+        profile = UserProfile.objects.get(session_token=token_value)
+        tempo_corrente = timezone.now()
+        tempo_valido = profile.last_check_token + timedelta(minutes=10) #if profile.last_check_token else timezone.now()
+        
+        if tempo_corrente <= tempo_valido:
+            profile.last_check_token = timezone.now()  # Aggiorna last_check_token con l'ora corrente
+            profile.save()
+            return HttpResponse('True')
+        else:
+            return HttpResponse('False', status=403)
+    else:
+        return HttpResponse('False', status=404)
+

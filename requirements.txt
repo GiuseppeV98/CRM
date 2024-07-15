@@ -11,3 +11,4 @@ django-python3-ldap==0.15.6
 pillow==10.2.0
 pyodbc>=3.0
 mssql-django>=1.5
+requests==2.32.3

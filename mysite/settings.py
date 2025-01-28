@@ -26,19 +26,19 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['172.23.149.57']
 
 
 
 AUTHENTICATION_BACKENDS = (
     "django_python3_ldap.auth.LDAPBackend", 
-    "django.contrib.auth.backends.ModelBackend",
+    
 )
 
 # LDAP auth settings.
 
-LDAP_AUTH_URL = ["ldap://192.168.1.2:389"]
-
+#LDAP_AUTH_URL = ["ldap://192.168.1.2:389"]
+LDAP_AUTH_URL = config('LDAP_AUTH_URL')
 LDAP_AUTH_SEARCH_BASE = "dc=corporate,dc=it"
 
 # Initiate TLS on connection.
@@ -119,8 +119,10 @@ LOGGING = {
 
 
 INSTALLED_APPS = [
+    'corsheaders',
     'dashboard',
     'django_otp',
+    "rest_framework",
     'django_otp.plugins.otp_totp',
     'two_factor_auth',
     'django.contrib.admin',
@@ -142,17 +144,48 @@ INSTALLED_APPS = [
     # Assicurati che questo sia dopo 'AuthenticationMiddleware'
 
 MIDDLEWARE = [
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware', 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'two_factor_auth.middleware.TwoFactorAuthMiddleware',
 ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    'http://172.23.149.57:3000',
+    'http://172.23.149.57:8000',
+]
+#CORS_ALLOW_ALL_ORIGINS = True
+#CSRF_COOKIE_HTTPONLY = False
+
+# settings.py
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://172.23.149.57:3000',
+    'http://172.23.149.57:8000',  # Indirizzo del frontend React in sviluppo
+    'http://localhost:8000',  # Backend Django, se richiesto tramite proxy dal frontend
+]
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+    'http://172.23.149.57:3000',
+    'http://172.23.149.57:8000',
+]
+CORS_ALLOW_CREDENTIALS = True
+
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
 
 ROOT_URLCONF = 'mysite.urls'
+
 
 TEMPLATES = [
     {
@@ -256,11 +289,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_COOKIE_AGE = 1800
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+import environ
+
+env = environ.Env()
+environ.Env.read_env()
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'vallarelli39@gmail.com'  # sostituisci con il tuo indirizzo email reale
-EMAIL_HOST_PASSWORD = 'vxtmuksqcnpigudm'  # sostituisci con la tua password o password per app
-DEFAULT_FROM_EMAIL = 'vallarelli39@gmail.com'
+EMAIL_HOST_USER = 'vallarelli39@gmail.com'
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')

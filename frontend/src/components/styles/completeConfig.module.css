@@ -1,0 +1,151 @@
+/* Usa classi, non ID, poiché gli ID non funzionano bene con CSS Modules */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
+
+body{
+    font-family: 'Open Sans', sans-serif;
+}
+
+.containerTesto {
+    position: relative;
+  }
+  
+  .containerTesto h3 {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 15px;
+    padding: 0;
+    color:black;
+  }
+  
+  .messaggioErrore {
+    position: absolute;
+    left: 50%;
+    top: 95px;
+    transform: translateX(-50%);
+    width: 90%;
+    color:black;
+  }
+  
+  .containerloginform {
+    position: relative;
+    padding-top: 70px;
+  }
+  
+  .login_form {
+    padding-top: 85px;
+    color:black;
+    font-size: 14px;
+  }
+  
+  .login_form label{
+    margin:3px;
+  }
+    .login_form input{
+      max-width: 200px;
+      margin: 0 auto; /* Questo centrerà l'input orizzontalmente */
+
+    }
+  .lato_form {
+    background: #508ef1;
+    padding-top: 50px;
+    width: 400px;
+    height: 400px;
+    box-shadow: 5px 5px 10px 0 rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btnVerify {
+    background-color: #0056b3;
+    border: none;
+    padding: 10px 20px;
+    color: white;
+    font-weight: bold;
+    width: 100%;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    max-width: 100px;
+    min-width: 100px;
+  
+  }
+  .btnLink{
+    margin-top: -28px;
+  }
+  .btn-primary:hover {
+    background-color: black;
+  }
+  .backup_Option {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 20px;
+    margin-bottom: 10px;
+    
+  }
+  .backup_Option h6 {
+   font-size: 12px;
+  }
+  /* Testo e link di backup: Rimosso nowrap */
+  .backup_option p {
+    color: #ffffff;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-align: center;
+    line-height: 2px;
+    margin-top:50px;
+    
+  }
+  .btnLink {
+    color: white;
+    text-decoration: underline;
+    font-size: 15px;
+    
+  }
+  .otpcontainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.otpinputs {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.otpInput {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+  @media only screen and (max-width: 768px) {
+    .backup_Option {
+        padding-left: 5px; /* Riduci il padding per adattarlo allo schermo più piccolo */
+        padding-right: 5px;
+        padding-top: 10px;
+        margin-bottom: 20px;
+        font-size: 10px; /* Riduci la dimensione del testo */
+    }
+    
+    .containerTesto h3 {
+        top: -20px; /* Cambia la posizione del titolo per adattarlo meglio al layout mobile */
+    }
+    .messaggioErrore {
+      top: 95px;
+    }
+    .login_form label{
+      margin-top:13px;
+    }
+    .btnLink{
+      margin-top: -15px;
+    }
+}

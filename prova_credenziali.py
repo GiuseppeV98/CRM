@@ -19,3 +19,6 @@ try:
 except Exception as e:
     print(f"Errore nell'autenticazione al server LDAP: {e}")
 
+#<form onSubmit={handleSubmit}>
+#<form onSubmit={(e) => { e.preventDefault(); handleVerifyOtp(); }}>// src/App.js
+

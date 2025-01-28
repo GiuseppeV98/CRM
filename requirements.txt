@@ -12,3 +12,4 @@ pillow==10.2.0
 pyodbc>=3.0
 mssql-django>=1.5
 requests==2.32.3
+react-helmet-async==2.0.5

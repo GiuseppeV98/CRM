@@ -5,9 +5,11 @@ import datetime
 from django.core import signing
 
 
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     two_factor_secret = models.CharField(max_length=100, blank=True)
+    complete_config = models.BooleanField(default=False)
     failed_login_attempts = models.IntegerField(default=0)
     last_failed_login_attempt = models.DateTimeField(null=True, blank=True)
     session_token = models.CharField(max_length=255, blank=True)
@@ -58,4 +60,3 @@ class UserProfile(models.Model):
         self.last_failed_login_attempt = None
         self.save()
 
-    

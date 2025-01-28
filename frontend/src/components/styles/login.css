@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
+
+body {
+    background-color:#f0f5fd  !important; /* Colore di sfondo */
+    margin: 0; /* Rimuove i margini predefiniti */
+    padding: 0; /* Rimuove i padding predefiniti */
+    font-family: 'Open Sans', sans-serif;
+         /* Imposta un font base */
+}
+#container {
+    margin: 100px auto;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    
+}
+.border {
+    border: none !important;
+}
+h1 {
+    white-space: nowrap; /* Evita che il testo vada a capo */
+}
+.row {
+    display: flex;
+    justify-content: space-between; /* Sposta il contenuto sui lati senza far andare il testo a capo */
+}
+
+#lato_logo {
+    padding: 0;
+    background: #848383;
+    width: 400px;
+    height: 400px;
+    box-shadow: 5px 5px 10px 0 rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#imglogin {
+    max-width: 100%;
+    height: auto;
+}
+
+
+.form-group{
+    margin-bottom: 20px;
+}
+@media only screen and (max-width: 768px) {
+    #container {
+    margin: 0px auto;
+    margin-bottom: 0px;
+    padding: 0px;
+    }
+}

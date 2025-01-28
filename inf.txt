@@ -4,7 +4,7 @@
 sudo apt update:
     Questo comando aggiorna l'indice dei pacchetti del tuo sistema operativo Linux.
     È un passaggio preliminare necessario per assicurarti che tu stia installando le versioni più recenti dei pacchetti disponibili.
-
+ 
 installazione librerie necessarie libldap2-dev e libsasl2-dev
 sudo apt install python3-pip python3-dev libldap2-dev libsasl2-dev libssl-dev:
     Questo comando installa vari pacchetti utili per lo sviluppo e l'esecuzione di applicazioni Python,
@@ -192,6 +192,47 @@ class TwoFactorAuthMiddleware:
                 return redirect('auth:logout')
 
         return response
+
+
+
+
+        def user_login(request):
+    form = AuthenticationForm(request, data=request.POST or None)
+    if request.user.is_authenticated:
+        return redirect('two_factor_auth:verify_otp')
+
+    if request.method == 'POST':
+        email = request.POST.get('username')
+        password = request.POST.get('password')
+        user_attempt = Authorization.objects.filter(username=email).first()#User
+        if user_attempt:
+            try:
+                profile, _ = Authorization.objects.get_or_create(user=user_attempt)#UserProfile
+            except Exception as e:
+                return render(request, 'login.html', {'form': form})
+
+            if not profile.can_attempt_login():
+                form.add_error(None, "Troppi tentativi di accesso falliti. Riprova più tardi.")
+                return render(request, 'login.html', {'form': form})
+            
+            user = authenticate(username=email, password=password)
+            if user:
+                login(request, user)  # Assicurati di fare il login prima di manipolare la sessione
+                request.session.cycle_key()
+
+                profile.reset_failed_login_attempts()  # Reset dei tentativi falliti
+                profile.last_check_token= timezone.now()
+                profile.save()              #aggiorno solo il last_check_token al primo accesso ---------------------
+                if not profile.two_factor_secret:
+                    return redirect('two_factor_auth:generate_qr')
+                else:
+                    request.session['verified_2fa'] = False  # Resetta il flag di verifica
+                    return redirect('two_factor_auth:verify_otp')
+            else:
+                profile.register_failed_login()  # Registra il tentativo fallito
+
+    return render(request, 'login.html', {'form': form})
+
 
 
 
@@ -465,4 +506,463 @@ def verify_token(request):
             return HttpResponse('False', status=403)
     else:
         return HttpResponse('False', status=404)
+
+if request.user.is_authenticated:
+        
+            profile = UserProfile.objects.get(user=request.user)
+            current_url_name = resolve(request.path).url_name
+            tempo_corrente = timezone.now()
+            tempo_valido = profile.last_check_token + timedelta(minutes=10)
+            if tempo_corrente>=tempo_valido:
+                return redirect('two_factor_auth:logout')
+            # Verifica se il token di sessione corrisponde
+           
+            if request.session.get('verified_2fa', False): #and two_factor==profile.get_two_factor():
+                two_factor = signing.loads(request.session.get('token_2fa'))
+                if two_factor==profile.get_two_factor():
+                    session_token = request.session.get('session_token')
+                    stored_token = profile.get_session_token()
+                    #if session_token:
+                    try:
+                        session_token = signing.loads(session_token)
+                    except signing.BadSignature:
+                        session_token = None
+                    if  stored_token != session_token:  #and tempo_corrente<=tempo_valido:   #stored_token and
+                        return redirect('two_factor_auth:logout')
+
+            if (request.session.get('verified_2fa', False)) and current_url_name in ['generate_qr', 'verify_otp','verify_backup']:
+                return redirect ('dashboard:homepage')
+                #('https://crm.adncallcenter.net/default.asp')# and two_factor==profile.get_two_factor()
+            if current_url_name != 'homepage' and request.session.get('verified_2fa', False):
+            # Se l'utente ha verificato l'OTP, non dovrebbe essere reindirizzato altrove.
+                return response
+            # Assicurati che l'utente completi la configurazione 2FA prima di accedere alla homepage
+            if current_url_name == 'homepage':
+                if not request.session.get('verified_2fa', False):
+                    # Reindirizza a generate_qr o verify_otp in base alla configurazione del segreto 2FA
+                    if not profile.two_factor_secret:
+                        return redirect('two_factor_auth:generate_qr')
+                    else:
+                        return redirect('two_factor_auth:verify_otp')
+
+            # Gestisci il flusso tra la generazione del QR e la verifica OTP
+            
+            #if current_url_name == 'generate_qr':
+                #if profile.two_factor_secret and not request.session.get('two_factor_token'):
+                # Accesso a generate_qr solo se esiste un token nella sessione
+                    # Senza token, reindirizza a verify_otp
+                    #return redirect('two_factor_auth:verify_otp')
+
+
+
+@ensure_csrf_cookie
+def user_login(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            username = data.get('username')
+            password = data.get('password')
+            user_attempt = User.objects.filter(username=username).first()
+            print(f"user_attempt: {user_attempt}")
+
+            if user_attempt:
+                profile, _ = UserProfile.objects.get_or_create(user=user_attempt)
+                if not profile.can_attempt_login():
+                    return JsonResponse({'error': 'Troppi tentativi di accesso falliti. Riprova più tardi.'}, status=403)
+                
+                user = authenticate(username=username, password=password)
+                if user:
+                    login(request, user)
+                    request.session.cycle_key()
+                    profile.reset_failed_login_attempts()
+                    profile.last_check_token = timezone.now()
+                    profile.save()
+                    print("Login successful, user logged in")
+
+                    if not profile.two_factor_secret:
+                        return JsonResponse({'redirect': 'generate_qr'}, status=200)
+                    else:
+                        request.session['verified_2fa'] = False
+                        return JsonResponse({'redirect': 'verify_otp'}, status=200)
+                else:
+                    profile.register_failed_login()
+                    return JsonResponse({'error': 'Credenziali non valide'}, status=401)
+            else:
+                print("User not found")
+                return JsonResponse({'error': 'Utente non trovato'}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    elif request.method == 'GET':
+        # Rispondi con uno status di successo o un messaggio che conferma che la pagina di login è accessibile
+        return JsonResponse({'status': 'success', 'message': 'Login page accessible'}, status=200)
+    
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Metodo non permesso'}, status=405)
+    #return JsonResponse({'error': 'Metodo non permesso'}, status=405)
+
+
+ <div className="container" id= "container">
+          <div className="row justify-content-center">
+            <div className="col-md-8 col-lg-6">
+              <div id="logo-container" className="text-center mb-4">
+                <img src="/images/adn_Piccolo.gif" id="imglogin" alt="Cuffie" />
+              </div>
+              <div id="login-form" className="p-4 border rounded">
+                <h2 className="mb-4">Login</h2>
+                {error && <div className="alert alert-danger">{error}</div>}
+                <form onSubmit={(e) => handleSubmit(e, username, password)}>
+                  <div className="form-group mb-3">
+                    <label htmlFor="username">Username:</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group mb-3">
+                    <label htmlFor="password">Password:</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      id="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary btn-block">
+                    Login
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+
+
+<div className="container mt-5" id="containerVerify">
+            {redirectData && <RedirectForm {...redirectData} />}
+            <div className="row justify-content-center">
+                <div className="col-md-12 col-lg-6 col-sl-3">
+                    <div className="text-center">
+                        <h2>Verifica OTP</h2>
+                    </div>
+                    <div className="p-4 border rounded container" id="login-formVerify">
+                        {error && <div className="alert alert-danger">{error}</div>}
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label htmlFor="otpCode">OTP Code:</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    id="otpCode"
+                                    value={otpCode}
+                                    onChange={e => setOtpCode(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <button type="submit" className="btn btn-primary btn-block">Verify</button>
+                        </form>
+                        <div className="backup-option text-center mt-3">
+                            <p>Non hai con te il cellulare? Accedi tramite Email</p>
+                            <button onClick={handleNavigateToBackup} className="btn btn-link">Usa il Codice di Backup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// LoginForm.jsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from './AxiosConfig';
+import Cookies from 'js-cookie';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+const LoginForm = () => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        axios.defaults.headers.common['X-CSRFToken'] = Cookies.get('csrftoken');
+    }, []);
+
+    const handleLogin = async (username, password) => {
+        try {
+            const response = await axios.post('http://172.23.149.57:8000/auth/login/', {
+                username: username,
+                password: password,
+            });
+
+            if (response.data.redirect) {
+                if (response.data.redirect === 'generate_qr') {
+                    navigate('/generate_qr_code ');
+                } else if (response.data.redirect === 'verify_otp') {
+                    navigate('/verify_otp');
+                } else if (response.data.redirect === 'dashboard') {
+                    navigate('/dashboard');
+                }
+            }
+        } catch (error) {
+            console.error('Error during login:', error);
+            if (error.response && error.response.data && error.response.data.error) {
+                setError(error.response.data.error);
+            } else {
+                setError('An unexpected error occurred.');
+            }
+        }
+    };
+
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        handleLogin(username, password);
+    };
+
+    return (
+      
+      <div className="container" id= "container">
+        <div class="row justify-content-center" id = "login">
+    <div class="col-4" id= "lato_logo">
+    <div id="logo-container" className="text-center mb-4">
+                <img src="/images/adn_Piccolo.gif" id="imglogin" alt="Cuffie" />
+    </div>
+     
+    </div>
+    <div class="col-4" id="lato_form">
+    <div id="login-form" className="p-4 border rounded">
+                <h2 className="mb-4">Login</h2>
+                {error && <div className="alert alert-danger">{error}</div>}
+                <form onSubmit={(e) => handleSubmit(e, username, password)}>
+                  <div className="form-group mb-3">
+                    <label htmlFor="username">Username:</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      id="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group mb-3">
+                    <label htmlFor="password">Password:</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      id="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary btn-block">
+                    Login
+                  </button>
+                </form>
+              </div>
+
+    </div>
+  </div>
+        
+GenerateQrCode,jsx 
+        </div>
+      );      
+}
+
+export default LoginForm;
+
+import React, { useState, useEffect } from 'react';
+import axios from './AxiosConfig';
+import { useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Alert, Button } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+const GenerateQrCode = () => {
+  const [qrImage, setQrImage] = useState(null);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchQrCode = async () => {
+      try {
+        const response = await axios.get('/auth/generate_qr/');
+        if (response.data.qr_image_base64) {
+          setQrImage(response.data.qr_image_base64);
+        } else {
+          navigate('/verify_otp');
+        }
+      } catch (error) {
+        setError('An unexpected error occurred while fetching the QR code.');
+        console.error('Error fetching QR code:', error);
+      }
+    };
+
+    fetchQrCode();
+  }, [navigate]);
+
+  return (
+    <Container className="mt-5">
+      <Row className="justify-content-center">
+        <Col md={8} lg={6} className="text-center">
+          <h2>Scan the QR Code</h2>
+          {error && <Alert variant="danger">{error}</Alert>}
+          {qrImage ? (
+            <>
+              <img src={`data:image/png;base64,${qrImage}`} alt="QR Code" style={{ maxWidth: '100%', height: 'auto' }} />
+              <Button variant="primary" className="mt-3" onClick={() => navigate('/verify_otp')}>Proceed to Verify OTP</Button>
+            </>
+          ) : (
+            <p>Loading QR code...</p>
+          )}
+        </Col>
+      </Row>
+    </Container>
+  );
+};
+
+export default GenerateQrCode;
+
+// src/components/VerifyOtpForm.jsx
+import React, { useState, useEffect } from 'react';
+import axios from './AxiosConfig';
+import Cookies from 'js-cookie';
+import RedirectForm from './RedirectForm';
+import { useNavigate } from 'react-router-dom';
+
+const VerifyOtpForm = () => {
+    const [otpCode, setOtpCode] = useState('');
+    const [error, setError] = useState('');
+    const [redirectData, setRedirectData] = useState(null);
+    const navigate = useNavigate();
+    const [limit, setLimit] = useState(0);
+
+    useEffect(() => {
+        axios.defaults.headers.common['X-CSRFToken'] = Cookies.get('csrftoken');
+    }, []);
+
+    const handleVerifyOtp = async () => {
+        try {
+            const response = await axios.post('http://172.23.149.57:8000/auth/verify_otp/', { otp_code: otpCode });
+            console.log("Risposta dal server:", response.data);
+            
+            if (response.data.status === 'success') {
+                const url_asp = 'https://crm.adncallcenter.net/training/defaultnew.asp'
+                if (response.data.redirect===url_asp) {
+                    setRedirectData({
+                        url: response.data.redirect,
+                        session_token: response.data.session_token,
+                        user: response.data.user,
+                        password:response.data.password
+                    });
+                } else {
+                    navigate(response.data.redirect); // Per percorsi relativi
+                }
+            } else {
+                setError('OTP non valido.');
+            }
+        } catch (error) {
+            console.error("Errore durante la verifica dell'OTP:", error);
+            setError('Errore durante la verifica dell\'OTP.');
+        }
+    };
+
+
+    const handleNavigateToBackup = async () => {
+        if(limit===0)
+        {
+            setLimit(1);
+            try {
+                await axios.get('/auth/send_otp_and_redirect/');
+                navigate('/verify_backup');
+            } catch (error) {
+                setError('Errore durante l\'invio dell\'OTP.');
+            }
+        setLimit(0);
+        }
+
+        
+    };
+
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        handleVerifyOtp();
+    };
+
+    return (
+        <div className="container" id= "container">
+        <div class="row justify-content-center" id = "login">
+    <div class="col-4" id= "lato_logo">
+    <div id="logo-container" className="text-center mb-4">
+                <img src="/images/adn_Piccolo.gif" id="imglogin" alt="Cuffie" />
+    </div>
+     
+    </div>
+    <div class="col-4" id="lato_form">
+    {redirectData && <RedirectForm {...redirectData} />}
+            <div className="row justify-content-center">
+                <div className="col-md-12 col-lg-6 col-sl-3">
+                    <div className="text-center">
+                        <h2>Verifica OTP</h2>
+                    </div>
+                    <div className="p-4 border rounded container" id="login-formVerify">
+                        {error && <div className="alert alert-danger">{error}</div>}
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label htmlFor="otpCode">OTP Code:</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    id="otpCode"
+                                    value={otpCode}
+                                    onChange={e => setOtpCode(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <button type="submit" className="btn btn-primary btn-block">Verify</button>
+                        </form>
+                        <div className="backup-option text-center mt-3">
+                            <p>Non hai con te il cellulare?</p>
+                            <p> Accedi tramite Email</p>
+                            <button onClick={handleNavigateToBackup} className="btn btn-link">Usa il Codice di Backup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    </div>
+  </div>
+        
+        
+        
+        </div>
+            );
+};
+
+export default VerifyOtpForm;
+
+questi sono i componenti che verranno collegati al componente principale, creami il componente principale che mostrerà i componenti che ti ho mostrato 
 

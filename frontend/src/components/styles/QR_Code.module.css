@@ -1,0 +1,34 @@
+
+.messaggioErrore {
+    position: absolute;
+    left: 50%;
+    top: 55px;
+    transform: translateX(-50%);
+    width: 100%;
+    color:black;
+  }
+  .containerTesto {
+    position: relative;
+    top: -80px; /* Sposta il testo verso l'alto */
+}
+  .containerloginform {
+    position: relative;
+  }
+  
+  .login_form {
+    margin-top: -75px; /* Ridotto rispetto ai 45px */
+    color: black;
+}
+
+  
+  .lato_form {
+    background: #508ef1;
+    padding-top: 50px;
+    width: 400px;
+    height: 400px;
+    box-shadow: 5px 5px 10px 0 rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  

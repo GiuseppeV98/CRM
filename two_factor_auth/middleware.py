@@ -1,5 +1,3 @@
-
-
 from django.shortcuts import redirect
 from django.urls import resolve
 from two_factor_auth.models import UserProfile
@@ -15,52 +13,6 @@ class TwoFactorAuthMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        if request.user.is_authenticated:
         
-            profile = UserProfile.objects.get(user=request.user)
-            current_url_name = resolve(request.path).url_name
-            tempo_corrente = timezone.now()
-            tempo_valido = profile.last_check_token + timedelta(minutes=10)
-            if tempo_corrente>=tempo_valido:
-                return redirect('two_factor_auth:logout')
-            # Verifica se il token di sessione corrisponde
-           
-            if request.session.get('verified_2fa', False): #and two_factor==profile.get_two_factor():
-                two_factor = signing.loads(request.session.get('token_2fa'))
-                if two_factor==profile.get_two_factor():
-                    session_token = request.session.get('session_token')
-                    stored_token = profile.get_session_token()
-                    #if session_token:
-                    try:
-                        session_token = signing.loads(session_token)
-                    except signing.BadSignature:
-                        session_token = None
-                    if  stored_token != session_token:  #and tempo_corrente<=tempo_valido:   #stored_token and
-                        return redirect('two_factor_auth:logout')
-
-            if (request.session.get('verified_2fa', False)) and current_url_name in ['generate_qr', 'verify_otp','verify_backup']:
-                return redirect ('dashboard:homepage')
-                #('https://crm.adncallcenter.net/default.asp')# and two_factor==profile.get_two_factor()
-            if current_url_name != 'homepage' and request.session.get('verified_2fa', False):
-            # Se l'utente ha verificato l'OTP, non dovrebbe essere reindirizzato altrove.
-                return response
-            # Assicurati che l'utente completi la configurazione 2FA prima di accedere alla homepage
-            if current_url_name == 'homepage':
-                if not request.session.get('verified_2fa', False):
-                    # Reindirizza a generate_qr o verify_otp in base alla configurazione del segreto 2FA
-                    if not profile.two_factor_secret:
-                        return redirect('two_factor_auth:generate_qr')
-                    else:
-                        return redirect('two_factor_auth:verify_otp')
-
-            # Gestisci il flusso tra la generazione del QR e la verifica OTP
-            
-            #if current_url_name == 'generate_qr':
-                #if profile.two_factor_secret and not request.session.get('two_factor_token'):
-                # Accesso a generate_qr solo se esiste un token nella sessione
-                    # Senza token, reindirizza a verify_otp
-                    #return redirect('two_factor_auth:verify_otp')
-
         return response
-
 
